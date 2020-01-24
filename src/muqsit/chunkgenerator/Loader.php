@@ -59,12 +59,15 @@ final class Loader extends PluginBase{
 			foreach($population_queue as $index => $gen){
 				if($world->populateChunk($gen->getX(), $gen->getZ())){
 					unset($population_queue[$index]);
+					if(count($population_queue) === 0 && !$generator->valid()){
+						return false;
+					}
 				}
 			}
 
-			while($loaded_chunks < self::MAX_LOADED_CHUNKS_ANY_ANY_GIVEN_INSTANCE){
+			while($iterated !== $iterations && $loaded_chunks < self::MAX_LOADED_CHUNKS_ANY_ANY_GIVEN_INSTANCE){
 				$generator->send(true);
-				if(!$generator->valid()){
+				if(!$generator->valid() && count($population_queue) === 0){
 					return false;
 				}
 
