@@ -13,7 +13,7 @@ use pocketmine\world\World;
 
 final class Loader extends PluginBase{
 
-	private const MAX_LOADED_CHUNKS_ANY_ANY_GIVEN_INSTANCE = 40401;
+	private const MAX_LOADED_CHUNKS_ANY_ANY_GIVEN_INSTANCE = 40402;
 
 	private function generateChunks(World $world, int $minChunkX, int $minChunkZ, int $maxChunkX, int $maxChunkZ) : void{
 		$loaded_chunks = 0;
