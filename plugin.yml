@@ -2,6 +2,7 @@ name: ChunkGenerator
 main: muqsit\chunkgenerator\Loader
 api: 4.0.0
 version: 0.0.1
+poggit: https://poggit.pmmp.io/ci/Muqsit/ChunkGenerator
 commands:
   cgen:
     usage: /cgen <world> <minchunkx> <minchunkz> <maxchunkx> <maxchunkz>
