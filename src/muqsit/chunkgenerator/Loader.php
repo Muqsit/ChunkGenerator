@@ -23,7 +23,6 @@ final class Loader extends PluginBase{
 
 		/** @var Generator $generator */
 		$generator = (static function() use($world, $minChunkX, $minChunkZ, $maxChunkX, $maxChunkZ, &$loaded_chunks, &$iterated, &$population_queue, $logger) : Generator{
-
 			for($chunkX = $minChunkX; $chunkX <= $maxChunkX; ++$chunkX){
 				for($chunkZ = $minChunkZ; $chunkZ <= $maxChunkZ; ++$chunkZ){
 					++$iterated;
@@ -55,7 +54,7 @@ final class Loader extends PluginBase{
 		})();
 
 		$iterations = (1 + ($maxChunkX - $minChunkX)) * (1 + ($maxChunkZ - $minChunkZ));
-		$this->getScheduler()->scheduleRepeatingTask(new CancellableClosureTask(function(int $currentTick) use(&$loaded_chunks, &$iterated, &$population_queue, $world, $iterations, $generator, $logger) : bool{
+		$this->getScheduler()->scheduleRepeatingTask(new CancellableClosureTask(static function() use(&$loaded_chunks, &$iterated, &$population_queue, $world, $iterations, $generator, $logger) : bool{
 			foreach($population_queue as $index => $gen){
 				if($world->populateChunk($gen->getX(), $gen->getZ())){
 					unset($population_queue[$index]);
