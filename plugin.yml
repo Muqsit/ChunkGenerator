@@ -4,4 +4,4 @@ api: 4.0.0
 version: 0.0.1
 commands:
   cgen:
-    usage: /cgen <world> <minchunkx> <minchunkz> <maxchunkx> <maxchunkz>
+    usage: /cgen <world> <minchunkx> <minchunkz> <maxchunkx> <maxchunkz> [population_queue_size=chunk-generation.population-queue-size]
