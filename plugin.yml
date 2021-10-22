@@ -1,7 +1,11 @@
 name: ChunkGenerator
 main: muqsit\chunkgenerator\Loader
-api: 4.0.0
-version: 0.0.1
+api: 4.0.0-BETA7
+version: 0.0.2
 commands:
   cgen:
-    usage: /cgen <world> <minchunkx> <minchunkz> <maxchunkx> <maxchunkz> [population_queue_size=chunk-generation.population-queue-size]
+    usage: /cgen <world> <minchunkx> <minchunkz> <maxchunkx> <maxchunkz>
+    permission: chunkgenerator.command
+permissions:
+  chunkgenerator.command:
+    default: op
