@@ -1,7 +1,7 @@
 name: ChunkGenerator
 main: muqsit\chunkgenerator\Loader
-api: 4.0.0-BETA7
-version: 0.0.2
+api: 5.0.0
+version: 0.0.3
 commands:
   cgen:
     usage: /cgen <world> <minchunkx> <minchunkz> <maxchunkx> <maxchunkz>
