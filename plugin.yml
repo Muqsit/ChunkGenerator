@@ -4,7 +4,7 @@ api: 5.0.0
 version: 0.0.3
 commands:
   cgen:
-    usage: /cgen <world> <minchunkx> <minchunkz> <maxchunkx> <maxchunkz>
+    usage: /cgen <world> <minchunkx> <minchunkz> <maxchunkx> <maxchunkz> [n_batch]
     permission: chunkgenerator.command
 permissions:
   chunkgenerator.command:
