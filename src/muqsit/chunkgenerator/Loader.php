@@ -13,11 +13,11 @@ use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
 use pocketmine\world\ChunkLoader;
-use pocketmine\world\format\Chunk;
 use pocketmine\world\World;
 use pocketmine\YmlServerProperties;
 use RuntimeException;
 use SOFe\AwaitGenerator\Await;
+use SOFe\AwaitGenerator\Channel;
 use SOFe\AwaitGenerator\Traverser;
 use function array_push;
 use function array_shift;
@@ -78,39 +78,50 @@ final class Loader extends PluginBase{
 	public function generateChunks(World $world, Iterator $points, int $count, ?int $n_batch = null) : Generator{
 		$n_batch ??= $this->getServer()->getConfigGroup()->getPropertyInt(YmlServerProperties::CHUNK_GENERATION_POPULATION_QUEUE_SIZE, 2);
 		$n_batch > 0 || throw new InvalidArgumentException("n_batch ({$n_batch}) must be > 0");
+		$loader = new class implements ChunkLoader{};
+
+		$channel = new Channel();
+		$schedule = static fn(int $x, int $z) => $world->orderChunkPopulation($x, $z, $loader)->onCompletion(
+			fn($c) => $channel->sendWithoutWait([$x, $z, true]),
+			fn() => $channel->sendWithoutWait([$x, $z, false]),
+		);
+
+		$i = 0;
+		while($i < $n_batch && $points->valid()){
+			[$x, $z] = $points->current();
+			$schedule($x, $z);
+			$points->next();
+			$i++;
+		}
+
+		$manager = $this->getServer()->getWorldManager();
+		$id = $world->getId();
 		$completed = 0;
 		$failed = [];
-		$loader = new class implements ChunkLoader{};
-		while(true){
-			while($points->valid()){
-				if(!$world->isLoaded() || !$this->isEnabled() || !$this->getServer()->isRunning()){
-					yield [$completed, $count - $completed, $count] => Traverser::VALUE;
-					break 2;
-				}
+		$retry = true;
+		while($i > 0){
+			[$x, $z, $success] = yield from $channel->receive();
+			$i--;
 
-				$tasks = [];
-				for($i = 0; $i < $n_batch && $points->valid(); $i++, $points->next()){
-					[$x, $z] = $points->current();
-					$tasks[] = Await::promise(static fn($resolve) => $world->orderChunkPopulation($x, $z, $loader)
-						->onCompletion(fn(Chunk $_) => $resolve([$x, $z, true]), fn() => $resolve([$x, $z, false])));
-				}
-				$result = yield from Await::all($tasks);
-				foreach($result as [$x, $z, $success]){
-					$world->unregisterChunkLoader($loader, $x, $z);
-					if($success){
-						$completed++;
-					}else{
-						$failed[] = [$x, $z];
-					}
-				}
-				$world->unloadChunks();
-				yield [$completed, count($failed), $count] => Traverser::VALUE;
+			$world->unregisterChunkLoader($loader, $x, $z);
+			if($success){
+				$completed++;
+			}else{
+				$failed[] = [$x, $z];
 			}
-			if(count($failed) > 0){
+
+			if($points->valid() && $manager->getWorld($id) !== null /* equivalent of $world->isLoaded() but we cant rely on that method here */){
+				[$x, $z] = $points->current();
+				$schedule($x, $z);
+				$points->next();
+				$i++;
+			}
+
+			yield [$completed, count($failed), $count] => Traverser::VALUE;
+			if($i === 0 && $retry && count($failed) > 0){ // retry failed requests once before we quit
+				$retry = false;
 				$points = new ArrayIterator($failed);
 				$failed = [];
-			}else{
-				break;
 			}
 		}
 	}
@@ -127,6 +138,7 @@ final class Loader extends PluginBase{
 		$message = null;
 		$progress = null;
 		$states = [0];
+		$last_pct = -0.01;
 		while(($state = array_shift($states)) !== null){
 			if($state === 0){ // state=initialization - check for errors
 				try{
@@ -137,7 +149,11 @@ final class Loader extends PluginBase{
 					$states[] = 1;
 				}
 			}elseif($state === 1){ // state=send message
-					$message ?? throw new RuntimeException("Requested state without setting a message");
+				$message ?? throw new RuntimeException("Requested state without setting a message");
+				if($message === ""){
+					$message = null;
+					continue;
+				}
 				$sender = $sender instanceof Player && $sender->isConnected() ? $sender : null;
 				if($sender !== null){
 					$sender->sendTip($message);
@@ -154,7 +170,13 @@ final class Loader extends PluginBase{
 				}
 			}elseif($state === 3){ // state=create progress message
 				[$completed, $failed, $count] = $progress;
-				$message = "{$world_name}: {$completed} / {$count} succeeded [" . sprintf("%.2f", ($completed / $count) * 100) . "%], {$failed} failed";
+				$pct = ($completed / $count) * 100;
+				if($pct - $last_pct >= 0.01){
+					$last_pct = $pct;
+					$message = "{$world_name}: {$completed} / {$count} succeeded [" . sprintf("%.2f", ($completed / $count) * 100) . "%], {$failed} failed";
+				}else{
+					$message = "";
+				}
 			}else{
 				throw new RuntimeException("Unexpected state ({$state}) encountered");
 			}
