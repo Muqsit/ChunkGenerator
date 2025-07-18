@@ -36,9 +36,19 @@ final class Loader extends PluginBase{
 	private function betweenPoints(int $x1, int $x2, int $z1, int $z2) : Generator{
 		$x2 >= $x1 || throw new InvalidArgumentException("x2 ({$x2}) must be >= x1 ({$x1})");
 		$z2 >= $z1 || throw new InvalidArgumentException("z2 ({$z2}) must be >= z1 ({$z1})");
-		for($x = $x1; $x <= $x2; $x++){
-			for($z = $z1; $z <= $z2; $z++){
-				yield [$x, $z];
+
+		$k = 3;
+		$min_x_mod = ($x1 % $k + $k) % $k;
+		$min_z_mod = ($z1 % $k + $k) % $k;
+		for($offset_x = 0; $offset_x < $k; $offset_x++){
+			for($offset_z = 0; $offset_z < $k; $offset_z++){
+				$x_start = $x1 + (($offset_x - $min_x_mod + $k) % $k);
+				$z_start = $z1 + (($offset_z - $min_z_mod + $k) % $k);
+				for($z = $z_start; $z <= $z2; $z += $k){
+					for($x = $x_start; $x <= $x2; $x += $k){
+						yield [$x, $z];
+					}
+				}
 			}
 		}
 	}
